@@ -3,11 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
 
@@ -95,9 +92,6 @@ public class WebService : IDisposable
         {
             record[name] = request.Headers.GetValues(name);
         }
-        long length = request.ContentLength64;
-        StreamReader streamReader = new StreamReader(request.InputStream);
-        string s = streamReader.ReadToEnd();
 
         var url = request.Url;
 
@@ -119,6 +113,7 @@ public class WebService : IDisposable
             {
                 BaseWebService service = url.LocalPath.ToLower() switch
                 {
+                    "/addtask" => new AddTaskService(),
                     _ => new FileService()
                 };
                 service.Process(webServiceContext);
@@ -128,15 +123,18 @@ public class WebService : IDisposable
                 response.StatusCode = 404;
             }
         }
-        if (url.Segments.Length >= 2)
-        {
 
+        try
+        {
+            if (response.StatusCode == 404)
+            {
+                response.ContentType = "text/html";
+                response.OutputStream.Write(ReadFile("404.html"));
+            }
         }
-
-        if (response.StatusCode == 404)
+        catch
         {
-            response.ContentType = "text/html";
-            response.OutputStream.Write(ReadFile("404.html"));
+
         }
 
         response.Close();

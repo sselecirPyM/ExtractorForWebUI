@@ -1,16 +1,14 @@
 ﻿using ExtractorForWebUI.Data;
 using ExtractorForWebUI.SDConnection;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
 
 public class ServiceSharedData
 {
+    public static ServiceSharedData SharedData { get;private set; }
+
     public ConcurrentQueue<ImageGenerateResult> imageGenerateResults = new();
 
     public ConcurrentQueue<ImageGenerateRequest> imageGenerateRequests = new();
@@ -26,6 +24,11 @@ public class ServiceSharedData
     public TaskConfig taskConfig;
 
     public List<SSHConfig> sshConfigs;
+
+    public ServiceSharedData()
+    {
+        SharedData = this;
+    }
 
     public void ServersInit()
     {

@@ -1,10 +1,6 @@
 ﻿using ExtractorForWebUI.Data;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
 
@@ -27,7 +23,7 @@ public class IOService
                 imagesDir.Create();
 
             var spanWriter = new SpanWriter<char>(t);
-            spanWriter.Write(DateTime.Now.ToString("yyyyMMddhhmmssff"));
+            spanWriter.Write(DateTime.Now.ToString("yyMMddHHmmssff"));
             spanWriter.Write((char)((f) % 10 + '0'));
             spanWriter.Write((char)((f / 10) % 10 + '0'));
             spanWriter.Write(".png");
