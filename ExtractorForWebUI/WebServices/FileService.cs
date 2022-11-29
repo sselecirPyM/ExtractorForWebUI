@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,11 +13,18 @@ public class FileService : BaseWebService
     {
         var response = context.Response;
         var url = context.Request.Url;
-        if (url.Segments.Length > 2)
+        if (url.Segments.Length > 1)
         {
-            string fileName = string.Concat(url.Segments[2..]);
-
-            response.ContentType = "text/html";
+            string fileName = string.Concat(url.Segments[1..]);
+            switch (Path.GetExtension(fileName))
+            {
+                case ".js":
+                    response.ContentType = "text/plain";
+                    break;
+                default:
+                    response.ContentType = "text/html";
+                    break;
+            }
             response.OutputStream.Write(context.GetFileData(fileName));
             response.StatusCode = 200;
         }

@@ -1,13 +1,11 @@
 ﻿using ExtractorForWebUI.Data;
 using ExtractorForWebUI.SDConnection;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.IO;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -25,7 +23,6 @@ public class DataService
 
     public void Tick()
     {
-        webUIConfigService.Tick();
         if (!noTask && sharedData.imageGenerateRequests.Count == 0)
         {
             noTask = true;
@@ -91,12 +88,13 @@ public class DataService
             }
             else
             {
-                var r = content.ReadAsByteArrayAsync().Result;
+                var imageContent = content.ReadAsByteArrayAsync().Result;
                 ResultOutput(new ImageGenerateResult
                 {
                     imageCount = 1,
-                    imageData = r,
+                    imageData = imageContent,
                     request = taskPack.Request,
+                    fileFormat = Path.GetExtension(result.RequestMessage.RequestUri.LocalPath)
                 });
             }
         }
@@ -232,12 +230,9 @@ public class DataService
         tasks.Add(new GenerateTaskPack(task, server, request));
     }
 
-    WebUIConfigService webUIConfigService;
-
     public DataService(ServiceSharedData serviceSharedData)
     {
         this.sharedData = serviceSharedData;
-        webUIConfigService = new WebUIConfigService(serviceSharedData);
     }
     ServiceSharedData sharedData;
 

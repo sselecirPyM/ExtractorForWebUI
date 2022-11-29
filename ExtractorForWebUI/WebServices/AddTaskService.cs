@@ -15,7 +15,7 @@ public class AddTaskService : BaseWebService
             try
             {
                 var taskConfig = JsonSerializer.Deserialize<TaskConfig>(Request.InputStream);
-                var generateRequests = ServiceSharedData.SharedData.imageGenerateRequests;
+                var generateRequests = context.SharedData.imageGenerateRequests;
                 foreach (var request in taskConfig.requests)
                 {
                     generateRequests.Enqueue(request);

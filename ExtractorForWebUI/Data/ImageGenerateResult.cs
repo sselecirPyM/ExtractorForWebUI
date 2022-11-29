@@ -11,4 +11,5 @@ public class ImageGenerateResult
     public int imageCount;
     public ImageGenerateRequest request;
     public byte[] imageData;
+    public string fileFormat;
 }

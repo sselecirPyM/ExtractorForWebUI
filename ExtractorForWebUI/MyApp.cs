@@ -1,15 +1,10 @@
 ﻿using ExtractorForWebUI.Magic;
-using ExtractorForWebUI.SDConnection;
 using ExtractorForWebUI.Services;
 using System;
-using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI;
 
@@ -24,6 +19,7 @@ public class MyApp
 
         dynamic m = new MagicObject();
         var t = ((WebService webService,
+            WebUIConfigService configService,
             DataService dataService,
             SSHConnectService sshConnectService,
             IOService ioService,
@@ -35,6 +31,7 @@ public class MyApp
         t.webService.Initialize(appConfig.Port);
 
         s.webService = t.webService;
+        s.configService = t.configService;
         s.dataService = t.dataService;
         s.sshConnectService = t.sshConnectService;
         s.ioService = t.ioService;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ExtractorForWebUI.Services;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,9 @@ public class WebServiceContext
     public Uri Uri;
 
     public string BasePath;
+
+    public ServiceSharedData SharedData;
+
     public byte[] GetFileData(string path)
     {
         string fullPath = Path.GetFullPath(path, BasePath);

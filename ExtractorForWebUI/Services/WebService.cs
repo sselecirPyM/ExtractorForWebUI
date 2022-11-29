@@ -45,18 +45,14 @@ public class WebService : IDisposable
         if (t0 > 0)
         {
             t0--;
-            Receive();
+            httpListener.BeginGetContext(ProcessReceive, null);
         }
     }
 #if DEBUG
-    public string workdir = Path.GetFullPath("../../../Files");
+    public string workdir = Path.GetFullPath("../../../Static");
 #else
-    public string workdir = Path.GetFullPath("Files");
+    public string workdir = Path.GetFullPath("Static");
 #endif
-    void Receive()
-    {
-        httpListener.BeginGetContext(ProcessReceive, null);
-    }
     void ProcessReceive(IAsyncResult ar)
     {
         try
@@ -101,13 +97,14 @@ public class WebService : IDisposable
         }
         else
         {
-            response.StatusCode = 404;
+            //response.StatusCode = 404;
             WebServiceContext webServiceContext = new WebServiceContext()
             {
                 Uri = url,
                 Request = request,
                 Response = response,
                 BasePath = workdir,
+                SharedData = serviceSharedData,
             };
             try
             {

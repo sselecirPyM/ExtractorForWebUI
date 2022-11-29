@@ -23,10 +23,10 @@ public class IOService
                 imagesDir.Create();
 
             var spanWriter = new SpanWriter<char>(t);
-            spanWriter.Write(DateTime.Now.ToString("yyMMddHHmmssff"));
+            spanWriter.Write(DateTime.Now.ToString("MMddHHmmssff"));
             spanWriter.Write((char)((f) % 10 + '0'));
             spanWriter.Write((char)((f / 10) % 10 + '0'));
-            spanWriter.Write(".png");
+            spanWriter.Write(result.fileFormat);
             f = (f + 1) % 100;
             var task = File.WriteAllBytesAsync(Path.Combine(path1, t[..spanWriter.Count].ToString()), result.imageData);
         }
