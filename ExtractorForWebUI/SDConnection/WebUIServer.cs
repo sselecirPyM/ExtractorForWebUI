@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.SDConnection;
 
@@ -24,6 +19,8 @@ public class WebUIServer
 
     public string internalName;
 
+    public string viewName;
+
     public static WebUIServer FromConfig(WebUIServerConfig config)
     {
         return new WebUIServer
@@ -36,6 +33,7 @@ public class WebUIServer
             isSSHConnect = config.SSHConfig != null,
             timestamp = Stopwatch.GetTimestamp(),
             internalName = config.Name,
+            viewName = config.Name,
         };
     }
 }

@@ -3,11 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
@@ -80,6 +77,10 @@ public class WebUIConfigService
                     {
                         server.fn_index = i;
                     }
+                }
+                if (server.fn_index > -1)
+                {
+                    Console.WriteLine("Server {0} Configured.", server.viewName);
                 }
             }
             else

@@ -14,21 +14,20 @@ public class MyApp
     dynamic s = new ExpandoObject();
     void Init()
     {
+        var sharedData = new ServiceSharedData();
+        sharedData.AppConfig = ReadJson<AppConfig>("appconfig.json");
+        sharedData.taskConfig = ReadJson<TaskConfig>("tasks.json");
+        sharedData.ServersInit();
 
-        AppConfig appConfig = ReadJson<AppConfig>("appconfig.json");
+        var magicObject = new MagicObject();
+        magicObject.Insert(sharedData);
 
-        dynamic m = new MagicObject();
+        dynamic m = magicObject;
         var t = ((WebService webService,
             WebUIConfigService configService,
             DataService dataService,
             SSHConnectService sshConnectService,
-            IOService ioService,
-            ServiceSharedData sharedData))m;
-
-        t.sharedData.AppConfig = appConfig;
-        t.sharedData.taskConfig = ReadJson<TaskConfig>("tasks.json");
-        t.sharedData.ServersInit();
-        t.webService.Initialize(appConfig.Port);
+            IOService ioService))m;
 
         s.webService = t.webService;
         s.configService = t.configService;
@@ -37,6 +36,7 @@ public class MyApp
         s.ioService = t.ioService;
         Console.WriteLine("Running. No server connected.");
     }
+
     public void Run()
     {
         Init();

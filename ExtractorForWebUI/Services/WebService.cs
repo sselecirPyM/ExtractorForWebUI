@@ -17,15 +17,17 @@ public class WebService : IDisposable
     int t0 = 10;
 
 
-    public WebService(ServiceSharedData serviceSharedData)
+    public WebService(ServiceSharedData sharedData)
     {
-        this.serviceSharedData = serviceSharedData;
+        this.sharedData = sharedData;
     }
-    ServiceSharedData serviceSharedData;
+    ServiceSharedData sharedData;
 
     public bool launchBrowserOnStart;
 
-    public void Initialize(int port)
+    bool initialized = false;
+
+    void Initialize(int port)
     {
         var url = string.Format("http://127.0.0.1:{0}/", port);
         httpListener = new HttpListener();
@@ -42,6 +44,11 @@ public class WebService : IDisposable
 
     public void Tick()
     {
+        if (!initialized)
+        {
+            Initialize(sharedData.AppConfig.Port);
+            initialized = true;
+        }
         if (t0 > 0)
         {
             t0--;
@@ -104,7 +111,7 @@ public class WebService : IDisposable
                 Request = request,
                 Response = response,
                 BasePath = workdir,
-                SharedData = serviceSharedData,
+                SharedData = sharedData,
             };
             try
             {

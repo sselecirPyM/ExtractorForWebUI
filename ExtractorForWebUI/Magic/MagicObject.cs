@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Magic;
 
@@ -18,9 +16,20 @@ public class MagicObject : DynamicObject
         Dictionary<Type, Type[]> infos = new();
         Dictionary<Type, List<int>> invertInfos = new();
         Dictionary<Type, int> parameterIndex = new();
-        object[] parameters = new object[args.Length];
+        object[] parameters = new object[args.Length + objects.Count];
         int[] invertCount = new int[args.Length];
         Stack<Type> stack = new();
+        HashSet<Type> initTypes = new();
+
+        //extra data
+        int objectCounter = args.Length;
+        foreach (var o in objects)
+        {
+            parameters[objectCounter] = o;
+            parameterIndex[o.GetType()] = objectCounter;
+            initTypes.Add(o.GetType());
+            objectCounter++;
+        }
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -34,6 +43,8 @@ public class MagicObject : DynamicObject
             var parameters1 = constructors[0].GetParameters().Select(u => u.ParameterType).ToArray();
             infos[arg] = parameters1;
             invertCount[i] = parameters1.Length;
+
+            int argc = parameters1.Length;
             foreach (var parameter in parameters1)
             {
                 if (!invertInfos.TryGetValue(parameter, out var ints))
@@ -41,8 +52,10 @@ public class MagicObject : DynamicObject
                     ints = invertInfos[parameter] = new List<int>();
                 }
                 ints.Add(i);
+                if (initTypes.Contains(parameter))
+                    argc--;
             }
-            if (parameters1.Length == 0)
+            if (argc == 0)
             {
                 stack.Push(arg);
             }
@@ -77,7 +90,14 @@ public class MagicObject : DynamicObject
             Debug.Assert(param != null);
         }
 
-        result = Activator.CreateInstance(returnType, parameters);
+        result = Activator.CreateInstance(returnType, parameters[..^objects.Count]);
         return true;
+    }
+
+    HashSet<object> objects = new();
+
+    public void Insert(object o)
+    {
+        objects.Add(o);
     }
 }
