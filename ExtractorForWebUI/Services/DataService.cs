@@ -93,7 +93,10 @@ public class DataService
                 {
                     imageCount = 1,
                     imageData = imageContent,
-                    request = taskPack.Request,
+                    saveDirectory = taskPack.Request.saveDirectory,
+                    prompt = taskPack.Request.prompt,
+                    width = taskPack.Request.width,
+                    height = taskPack.Request.height,
                     fileFormat = Path.GetExtension(result.RequestMessage.RequestUri.LocalPath)
                 });
             }
@@ -145,7 +148,7 @@ public class DataService
 
     void ResultOutput(ImageGenerateResult result)
     {
-        sharedData.imageGenerateResults.Enqueue(result);
+        sharedData.AddResult(result);
     }
 
     void RetryTask(GenerateTaskPack pack)

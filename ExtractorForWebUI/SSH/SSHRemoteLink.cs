@@ -1,9 +1,5 @@
 ﻿using Renci.SshNet;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.SSH;
 
@@ -37,6 +33,7 @@ public class SSHRemoteLink : IDisposable
         {
 
         };
+        sshClient.KeepAliveInterval = new TimeSpan(0, 0, 30);
         sshClient.Connect();
         sshClient.AddForwardedPort(new ForwardedPortLocal("127.0.0.1", localForward, "127.0.0.1", remoteForward));
         foreach (var forwarding in sshClient.ForwardedPorts)

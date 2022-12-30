@@ -27,14 +27,17 @@ public class MyApp
             WebUIConfigService configService,
             DataService dataService,
             SSHConnectService sshConnectService,
+            RTMPService rtmpService,
             IOService ioService))m;
 
-        s.webService = t.webService;
         s.configService = t.configService;
         s.dataService = t.dataService;
-        s.sshConnectService = t.sshConnectService;
-        s.ioService = t.ioService;
+
         Console.WriteLine("Running. No server connected.");
+        _ = t.ioService.Run();
+        _ = t.webService.Run();
+        _ = t.sshConnectService.Run();
+        _ = t.rtmpService.Run();
     }
 
     public void Run()

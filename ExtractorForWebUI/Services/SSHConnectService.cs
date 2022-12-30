@@ -3,8 +3,6 @@ using ExtractorForWebUI.SSH;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
@@ -20,7 +18,17 @@ public class SSHConnectService : IDisposable
 
     long interval = 30 * Stopwatch.Frequency;
 
-    public void Tick()
+    public async Task Run()
+    {
+        Debug.Assert(!disposed);
+        while (!disposed)
+        {
+            CoreTick();
+            await Task.Delay(1);
+        }
+    }
+
+    void CoreTick()
     {
         timestamp = Stopwatch.GetTimestamp();
         if (lastUpdate + interval < timestamp)
@@ -73,12 +81,6 @@ public class SSHConnectService : IDisposable
         }
     }
 
-    public SSHConnectService(ServiceSharedData serviceSharedData)
-    {
-        this.sharedData = serviceSharedData;
-    }
-    ServiceSharedData sharedData;
-
     void AfterConnect(SSHRemoteLink remoteLink)
     {
         var serverConfig = sharedData.ssh2Server[remoteLink.internalName];
@@ -87,8 +89,17 @@ public class SSHConnectService : IDisposable
         sharedData.webUIServers[remoteLink.internalName] = server;
     }
 
+    public SSHConnectService(ServiceSharedData serviceSharedData)
+    {
+        this.sharedData = serviceSharedData;
+    }
+    ServiceSharedData sharedData;
+
+    bool disposed = false;
+
     public void Dispose()
     {
+        disposed = true;
         foreach (var link in liveLinks.Values)
         {
             link.Disconnect();

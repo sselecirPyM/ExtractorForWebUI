@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
 
@@ -42,7 +43,7 @@ public class WebService : IDisposable
         //Console.WriteLine(url);
     }
 
-    public void Tick()
+    void Tick()
     {
         if (!initialized)
         {
@@ -53,6 +54,15 @@ public class WebService : IDisposable
         {
             t0--;
             httpListener.BeginGetContext(ProcessReceive, null);
+        }
+    }
+
+    public async Task Run()
+    {
+        while (!disposed)
+        {
+            Tick();
+            await Task.Delay(1);
         }
     }
 #if DEBUG
@@ -102,7 +112,7 @@ public class WebService : IDisposable
         {
             response.OutputStream.Write(ReadFile("favicon.ico"));
         }
-        else
+        else if (url.Segments.Length > 1)
         {
             //response.StatusCode = 404;
             WebServiceContext webServiceContext = new WebServiceContext()
@@ -115,9 +125,10 @@ public class WebService : IDisposable
             };
             try
             {
-                BaseWebService service = url.LocalPath.ToLower() switch
+                BaseWebService service = url.Segments[1].ToLower() switch
                 {
-                    "/addtask" => new AddTaskService(),
+                    "addtask/" => new AddTaskService(),
+                    "stream/" => new OpenStreamService(),
                     _ => new FileService()
                 };
                 service.Process(webServiceContext);
@@ -159,8 +170,11 @@ public class WebService : IDisposable
         }
     }
 
+    public bool disposed = false;
+
     public void Dispose()
     {
+        disposed = true;
         httpListener.Stop();
     }
 }

@@ -1,5 +1,6 @@
 ﻿using ExtractorForWebUI.Data;
 using ExtractorForWebUI.SDConnection;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
@@ -15,6 +16,12 @@ public class ServiceSharedData
 
     public Dictionary<string, WebUIServerConfig> ssh2Server = new();
 
+    public ConcurrentQueue<RTMPRequest> RTMPRequests = new();
+
+    public ConcurrentQueue<ImageGenerateResult> rtmpQueue = new();
+
+    public int rtmpLive = 0;
+
     public bool UseSSH = true;
 
     public AppConfig AppConfig;
@@ -22,6 +29,13 @@ public class ServiceSharedData
     public TaskConfig taskConfig;
 
     public List<SSHConfig> sshConfigs;
+
+    public void AddResult(ImageGenerateResult result)
+    {
+        imageGenerateResults.Enqueue(result);
+        if (rtmpLive > 0)
+            rtmpQueue.Enqueue(result);
+    }
 
     public void ServersInit()
     {
@@ -38,12 +52,13 @@ public class ServiceSharedData
                 webUIServers[config.Name] = WebUIServer.FromConfig(config);
             }
         }
-        if (taskConfig != null && taskConfig.requests != null)
+        if (taskConfig != null && taskConfig.requests != null && taskConfig.requests.Length > 0)
         {
             foreach (var r in taskConfig.requests)
             {
                 imageGenerateRequests.Enqueue(r);
             }
+            Console.WriteLine("{0} tasks added.", taskConfig.requests.Length);
         }
 
         sshConfigs = new();

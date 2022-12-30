@@ -1,9 +1,5 @@
 ﻿using ExtractorForWebUI.SDConnection;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ExtractorForWebUI;
 
@@ -13,6 +9,10 @@ public class AppConfig
     public int Port { get; set; } = 19198;
     public bool launchBrowserOnStart = true;
     public string PrivateKeyFile { get; set; }
+
+    public string RTMPBaseURL { get; set; }
+
+    public string RedirectBaseURL { get; set; }
 
     public void Check()
     {

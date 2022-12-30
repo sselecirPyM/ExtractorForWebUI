@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ExtractorForWebUI.Data;
+﻿namespace ExtractorForWebUI.Data;
 
 public class ImageGenerateResult
 {
     public int imageCount;
-    public ImageGenerateRequest request;
+    public string saveDirectory;
+    public string prompt;
     public byte[] imageData;
     public string fileFormat;
+
+    public int width;
+    public int height;
 }
