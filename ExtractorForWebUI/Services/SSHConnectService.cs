@@ -23,12 +23,12 @@ public class SSHConnectService : IDisposable
         Debug.Assert(!disposed);
         while (!disposed)
         {
-            CoreTick();
+            Tick();
             await Task.Delay(1);
         }
     }
 
-    void CoreTick()
+    void Tick()
     {
         timestamp = Stopwatch.GetTimestamp();
         if (lastUpdate + interval < timestamp)
@@ -86,6 +86,7 @@ public class SSHConnectService : IDisposable
         var serverConfig = sharedData.ssh2Server[remoteLink.internalName];
         var server = WebUIServer.FromConfig(serverConfig);
         server.URL = new Uri(string.Format("http://127.0.0.1:{0}/", remoteLink.localForward));
+        server.internalName = remoteLink.internalName;
         sharedData.webUIServers[remoteLink.internalName] = server;
     }
 
