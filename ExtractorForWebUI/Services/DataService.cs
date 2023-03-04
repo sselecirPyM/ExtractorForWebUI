@@ -181,51 +181,28 @@ public class DataService
         WebUIFrame frame;
         Uri uri;
         JsonContent content;
+        Dictionary<string, object> data1 = new Dictionary<string, object>()
+        {
+            ["txt2img_prompt"] = request.prompt,
+            ["txt2img_neg_prompt"] = request.negativePrompt,
+            ["txt2img_steps"] = request.step,
+            ["txt2img_sampling"] = request.sampleMethod,
+            ["txt2img_restore_faces"] = request.restore_faces,
+            ["txt2img_batch_count"] = batchCount,
+            ["txt2img_batch_size"] = batchSize,
+            ["txt2img_seed"] = request.seed,
+            ["txt2img_subseed"] = request.subSeed,
+            ["txt2img_subseed_strength"] = request.subSeedStrength,
+            ["txt2img_height"] = request.height,
+            ["txt2img_width"] = request.width,
+        };
+        object[] data = server.FillDatas(data1);
+
         frame = new WebUIFrame()
         {
             fn_index = server.fn_index,
             session_hash = "spider",
-            data = new object[]
-            {
-                request.prompt,
-                request.negativePrompt,
-                "None",
-                "None",
-                request.step,
-                request.sampleMethod,
-                request.restore_faces,
-                request.tiling,
-                batchCount,
-                batchSize,
-                request.cfgScale,
-                request.seed,
-                request.subSeed,
-                request.subSeedStrength,
-                0,
-                0,
-                false,
-                request.height,
-                request.width,
-                false,
-                request.denoiseStrenth,
-                0,
-                0,
-                "None",
-                false,
-                false,
-                false,
-                "",
-                "Seed",
-                "",
-                "Nothing",
-                "",
-                true,
-                true,
-                false,
-                null,
-                "",
-                ""
-            }
+            data = data
         };
         uri = new Uri(server.URL, "/run/predict/");
         content = JsonContent.Create(frame);

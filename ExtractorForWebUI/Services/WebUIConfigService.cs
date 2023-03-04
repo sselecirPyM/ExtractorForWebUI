@@ -1,4 +1,5 @@
-﻿using ExtractorForWebUI.SDConnection;
+﻿using ExtractorForWebUI.Data.Config;
+using ExtractorForWebUI.SDConnection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -70,18 +71,7 @@ public class WebUIConfigService
             if (content.Headers.ContentType.MediaType == "application/json")
             {
                 var response = content.ReadFromJsonAsync<ConfigData>().Result;
-                for (int i = 0; i < response.dependencies.Length; i++)
-                {
-                    ConfigDataDependency t = response.dependencies[i];
-                    if (t.trigger == "click" && t.js == "submit")
-                    {
-                        server.fn_index = i;
-                    }
-                }
-                if (server.fn_index > -1)
-                {
-                    Console.WriteLine("Server {0} Configured.", server.viewName);
-                }
+                server.Config(response);
             }
             else
             {
@@ -100,17 +90,6 @@ public class WebUIConfigService
     {
         server.canUse = false;
         retryAt[server.internalName] = Stopwatch.GetTimestamp() + 30L * Stopwatch.Frequency;
-    }
-
-    class ConfigData
-    {
-        public ConfigDataDependency[] dependencies { get; set; }
-    }
-
-    class ConfigDataDependency
-    {
-        public string trigger { get; set; }
-        public string js { get; set; }
     }
 
     class ConfigTaskPack
