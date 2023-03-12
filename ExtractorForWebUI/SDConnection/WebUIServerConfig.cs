@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ExtractorForWebUI.SDConnection;
+﻿namespace ExtractorForWebUI.SDConnection;
 
 public class WebUIServerConfig
 {
@@ -12,7 +6,6 @@ public class WebUIServerConfig
     public int BatchSize { get; set; } = 1;
 
     public string URL { get; set; }
-    public bool Windows { get; set; }
     public bool Activate { get; set; } = true;
 
     public SSHConfig SSHConfig { get; set; }
@@ -25,6 +18,8 @@ public class SSHConfig
     public string HostName { get; set; }
     public int? Forwarding { get; set; }
     public int LocalPort { get; set; }
+
+    public string PrivateKeyFile { get; set; }
 
     string _name;
     public string GetName()

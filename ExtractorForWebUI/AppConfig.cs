@@ -18,10 +18,17 @@ public class AppConfig
     {
         foreach (var serverConfig in WebUIServers)
         {
-            if (serverConfig.Name == null)
+            if (serverConfig.SSHConfig != null)
             {
                 var sshConfig = serverConfig.SSHConfig;
-                serverConfig.Name = sshConfig.GetName();
+                if (serverConfig.Name == null)
+                {
+                    serverConfig.Name = sshConfig.GetName();
+                }
+                if (sshConfig.PrivateKeyFile == null)
+                {
+                    sshConfig.PrivateKeyFile = PrivateKeyFile;
+                }
             }
         }
     }

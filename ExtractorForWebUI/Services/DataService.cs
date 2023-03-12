@@ -15,9 +15,9 @@ public class DataService
 {
     public HttpClient HttpClient = new HttpClient();
 
-    List<GenerateTaskPack> tasks = new();
-    Queue<WebUIServer> servers = new();
-    Dictionary<string, long> retryAt = new();
+    List<GenerateTaskPack> generateTasks = new();
+    List<GetImageTaskPack> getImageTasks = new();
+    List<WebUIServer> servers = new();
 
     bool noTask;
 
@@ -32,53 +32,50 @@ public class DataService
         servers.Clear();
         foreach (var (key, d) in sharedData.webUIServers)
         {
-            if (retryAt.TryGetValue(key, out long timestamp))
+            if (d.state == WebUIServerState.RunningError && d.retryAt < Stopwatch.GetTimestamp())
             {
-                if (timestamp < Stopwatch.GetTimestamp())
+                d.state = WebUIServerState.Configured;
+            }
+
+            if (d.state == WebUIServerState.Configured)
+            {
+                servers.Add(d);
+            }
+        }
+        foreach(var s in servers)
+        {
+            if(sharedData.imageGenerateRequests.TryDequeue(out var r))
+            {
+                SendPost(r, s);
+                if (s.imageBatchSize < r.imageCount)
                 {
-                    d.canUse = true;
-                    retryAt.Remove(key);
+                    r.imageCount -= s.imageBatchSize;
+                    sharedData.imageGenerateRequests.Enqueue(r);
                 }
             }
-
-            if (d.canUse && d.activate && d.fn_index != -1)
+            else
             {
-                servers.Enqueue(d);
-            }
-        }
-        while (sharedData.imageGenerateRequests.TryDequeue(out var r))
-        {
-            if (servers.Count == 0)
-            {
-                sharedData.imageGenerateRequests.Enqueue(r);
                 break;
             }
-            var s = servers.Dequeue();
-            s.canUse = false;
-            SendPost(r, s);
-            if (s.imageBatchSize < r.imageCount)
-            {
-                r.imageCount -= s.imageBatchSize;
-                sharedData.imageGenerateRequests.Enqueue(r);
-            }
         }
 
-        tasks.RemoveAll(TaskDone);
+        generateTasks.RemoveAll(GenerateTaskDone);
+        getImageTasks.RemoveAll(ImageTaskDone);
     }
 
-    bool TaskDone(GenerateTaskPack taskPack)
+    bool GenerateTaskDone(GenerateTaskPack taskPack)
     {
         var receive = taskPack.task;
         if (!receive.IsCompleted)
             return receive.IsCompleted;
+
         try
         {
             var result = receive.Result;
             var content = result.Content;
             if (result.StatusCode != System.Net.HttpStatusCode.OK)
             {
-                string s1 = content.ReadAsStringAsync().Result;
-                Console.WriteLine((int)result.StatusCode + s1);
+                Console.WriteLine((int)result.StatusCode + content.ReadAsStringAsync().Result);
                 RetryTask(taskPack);
                 return true;
             }
@@ -86,20 +83,44 @@ public class DataService
             {
                 GenerateTaskJson(taskPack);
             }
-            else
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            RetryTask(taskPack);
+        }
+        return true;
+    }
+
+    bool ImageTaskDone(GetImageTaskPack taskPack)
+    {
+        var receive = taskPack.task;
+        if (!receive.IsCompleted)
+            return receive.IsCompleted;
+
+        try
+        {
+            var result = receive.Result;
+            var content = result.Content;
+            if (result.StatusCode != System.Net.HttpStatusCode.OK)
             {
-                var imageContent = content.ReadAsByteArrayAsync().Result;
-                ResultOutput(new ImageGenerateResult
-                {
-                    imageCount = 1,
-                    imageData = imageContent,
-                    saveDirectory = taskPack.Request.saveDirectory,
-                    prompt = taskPack.Request.prompt,
-                    width = taskPack.Request.width,
-                    height = taskPack.Request.height,
-                    fileFormat = Path.GetExtension(result.RequestMessage.RequestUri.LocalPath)
-                });
+                Console.WriteLine((int)result.StatusCode + content.ReadAsStringAsync().Result);
+                RetryTask(taskPack);
+                return true;
             }
+
+            var imageData = content.ReadAsByteArrayAsync().Result;
+            var request = taskPack.request;
+            ResultOutput(new ImageGenerateResult
+            {
+                imageCount = 1,
+                imageData = imageData,
+                saveDirectory = request.saveDirectory,
+                prompt = request.prompt,
+                width = request.width,
+                height = request.height,
+                fileFormat = Path.GetExtension(result.RequestMessage.RequestUri.LocalPath)
+            });
         }
         catch (Exception ex)
         {
@@ -128,7 +149,6 @@ public class DataService
         if (e0.ValueKind == JsonValueKind.Object)
         {
             int length = element.GetArrayLength();
-            server.canUse = true;
             for (int i = 0; i < length; i++)
             {
                 if (length > 2 && i == 0)
@@ -138,10 +158,15 @@ public class DataService
 
                 var path = o.GetString();
                 var getTask = HttpClient.GetAsync(new Uri(server.URL, string.Format("file={0}", path)));
-                var request = taskPack.Request.Clone();
+                var request = taskPack.request.Clone();
                 request.imageCount = 1;
-                tasks.Add(new GenerateTaskPack(getTask, server, request));
+                getImageTasks.Add(new GetImageTaskPack(getTask, request));
             }
+            server.state = WebUIServerState.Configured;
+        }
+        else
+        {
+            RetryTask(taskPack);
         }
         return true;
     }
@@ -153,21 +178,32 @@ public class DataService
 
     void RetryTask(GenerateTaskPack pack)
     {
-        if (sharedData.imageGenerateRequests.TryPeek(out var request) && request.IsSameRequest(pack.Request))
+        AddRequest(pack.request);
+        Retry(pack.server);
+    }
+
+    void RetryTask(GetImageTaskPack pack)
+    {
+        AddRequest(pack.request);
+        //Retry(pack.server);
+    }
+
+    void AddRequest(ImageGenerateRequest addRequest)
+    {
+        if (sharedData.imageGenerateRequests.TryPeek(out var request) && request.IsSameRequest(addRequest))
         {
-            request.imageCount += pack.Request.imageCount;
+            request.imageCount += addRequest.imageCount;
         }
         else
         {
-            sharedData.imageGenerateRequests.Enqueue(pack.Request);
+            sharedData.imageGenerateRequests.Enqueue(addRequest);
         }
-        Retry(pack.server);
     }
 
     void Retry(WebUIServer server)
     {
-        server.canUse = false;
-        retryAt[server.internalName] = Stopwatch.GetTimestamp() + 30L * Stopwatch.Frequency;
+        server.retryAt = Stopwatch.GetTimestamp() + 30L * Stopwatch.Frequency;
+        server.state = WebUIServerState.RunningError;
     }
 
     void SendPost(ImageGenerateRequest request, WebUIServer server)
@@ -178,7 +214,7 @@ public class DataService
         request = request.Clone();
         request.imageCount = batchSize;
 
-        WebUIFrame frame;
+        WebUITxt2ImgFrame frame;
         Uri uri;
         JsonContent content;
         Dictionary<string, object> data1 = new Dictionary<string, object>()
@@ -196,18 +232,19 @@ public class DataService
             ["txt2img_height"] = request.height,
             ["txt2img_width"] = request.width,
         };
-        object[] data = server.FillDatas(data1);
+        object[] data = server.SDWebUIConfig.FillDatasTxt2Img(data1);
 
-        frame = new WebUIFrame()
+        frame = new WebUITxt2ImgFrame()
         {
-            fn_index = server.fn_index,
+            fn_index = server.txt2img_fn_index,
             session_hash = "spider",
             data = data
         };
         uri = new Uri(server.URL, "/run/predict/");
         content = JsonContent.Create(frame);
         var task = HttpClient.PostAsync(uri, content);
-        tasks.Add(new GenerateTaskPack(task, server, request));
+        generateTasks.Add(new GenerateTaskPack(task, server, request));
+        server.state = WebUIServerState.Running;
     }
 
     public DataService(ServiceSharedData serviceSharedData)
@@ -220,18 +257,30 @@ public class DataService
     {
         public Task<HttpResponseMessage> task;
         public WebUIServer server;
-        public ImageGenerateRequest Request;
+        public ImageGenerateRequest request;
 
         public GenerateTaskPack(Task<HttpResponseMessage> task, WebUIServer server, ImageGenerateRequest request)
         {
             this.task = task;
             this.server = server;
-            Request = request;
+            this.request = request;
+        }
+    }
+
+    class GetImageTaskPack
+    {
+        public Task<HttpResponseMessage> task;
+        public ImageGenerateRequest request;
+
+        public GetImageTaskPack(Task<HttpResponseMessage> task, ImageGenerateRequest request)
+        {
+            this.task = task;
+            this.request = request;
         }
     }
 
 #pragma warning disable IDE1006 // 命名样式
-    class WebUIFrame
+    class WebUITxt2ImgFrame
     {
         public int fn_index { get; set; }
         public string session_hash { get; set; }

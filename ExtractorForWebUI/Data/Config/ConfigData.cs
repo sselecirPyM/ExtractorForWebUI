@@ -1,6 +1,7 @@
 ﻿namespace ExtractorForWebUI.Data.Config;
 
 
+#pragma warning disable IDE1006 // 命名样式
 public class ConfigData
 {
     public string version { get; set; }
@@ -32,3 +33,4 @@ public class ConfigDataDependency
     public int[] inputs { get; set; }
     public int[] outputs { get; set; }
 }
+#pragma warning restore IDE1006 // 命名样式

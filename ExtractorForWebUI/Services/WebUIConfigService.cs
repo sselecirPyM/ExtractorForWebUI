@@ -15,7 +15,6 @@ public class WebUIConfigService
     public HttpClient HttpClient = new HttpClient();
 
     List<ConfigTaskPack> tasks = new();
-    Dictionary<string, long> retryAt = new();
 
     public WebUIConfigService(ServiceSharedData sharedData)
     {
@@ -27,29 +26,27 @@ public class WebUIConfigService
     {
         foreach (var (key, d) in sharedData.webUIServers)
         {
-            if (retryAt.TryGetValue(key, out long timestamp))
-            {
-                if (timestamp < Stopwatch.GetTimestamp())
-                {
-                    d.canUse = true;
-                    retryAt.Remove(key);
-                }
-            }
-
-            if (d.canUse && d.activate)
-            {
-                if (d.fn_index != -1)
-                {
-                    continue;
-                }
-                if (!tasks.Any(u => u.server == d))
-                {
-                    tasks.Add(new ConfigTaskPack(HttpClient.GetAsync(new Uri(d.URL, "config")), d));
-                }
-            }
+            ServerState(d);
         }
 
         tasks.RemoveAll(TaskDone);
+    }
+
+    void ServerState(WebUIServer server)
+    {
+        if (server.state == WebUIServerState.SSHConnected)
+        {
+            server.state = WebUIServerState.NotConfigured;
+        }
+
+        if (server.activate && server.state == WebUIServerState.NotConfigured && server.retryAt < Stopwatch.GetTimestamp())
+        {
+            if (!tasks.Any(u => u.server == server))
+            {
+                tasks.Add(new ConfigTaskPack(HttpClient.GetAsync(new Uri(server.URL, "config")), server));
+                server.state = WebUIServerState.Configuring;
+            }
+        }
     }
 
     bool TaskDone(ConfigTaskPack taskPack)
@@ -58,6 +55,7 @@ public class WebUIConfigService
         var server = taskPack.server;
         if (!receive.IsCompleted)
             return receive.IsCompleted;
+
         try
         {
             var result = receive.Result;
@@ -66,16 +64,25 @@ public class WebUIConfigService
             {
                 string s1 = content.ReadAsStringAsync().Result;
                 Console.WriteLine((int)result.StatusCode + s1);
-                return true;
+                Retry(server);
             }
-            if (content.Headers.ContentType.MediaType == "application/json")
+            else if (content.Headers.ContentType.MediaType == "application/json")
             {
                 var response = content.ReadFromJsonAsync<ConfigData>().Result;
-                server.Config(response);
+                server.SDWebUIConfig.Config(response);
+                if (server.txt2img_fn_index != -1)
+                {
+                    server.state = WebUIServerState.Configured;
+                    Console.WriteLine("Server {0} Configured.", server.viewName);
+                }
+                else
+                {
+                    Retry(server);
+                }
             }
             else
             {
-
+                Retry(server);
             }
         }
         catch (Exception ex)
@@ -88,8 +95,8 @@ public class WebUIConfigService
 
     void Retry(WebUIServer server)
     {
-        server.canUse = false;
-        retryAt[server.internalName] = Stopwatch.GetTimestamp() + 30L * Stopwatch.Frequency;
+        server.state = WebUIServerState.NotConfigured;
+        server.retryAt = Stopwatch.GetTimestamp() + 30L * Stopwatch.Frequency;
     }
 
     class ConfigTaskPack

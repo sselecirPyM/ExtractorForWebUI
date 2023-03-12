@@ -1,7 +1,6 @@
 ﻿using ExtractorForWebUI.SDConnection;
 using ExtractorForWebUI.SSH;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
@@ -9,11 +8,6 @@ namespace ExtractorForWebUI.Services;
 
 public class SSHConnectService : IDisposable
 {
-    IReadOnlyList<SSHConfig> sshConfigs;
-
-    public Dictionary<string, SSHRemoteLink> liveLinks = new();
-
-    long timestamp;
     long lastUpdate;
 
     long interval = 30 * Stopwatch.Frequency;
@@ -30,7 +24,7 @@ public class SSHConnectService : IDisposable
 
     void Tick()
     {
-        timestamp = Stopwatch.GetTimestamp();
+        long timestamp = Stopwatch.GetTimestamp();
         if (lastUpdate + interval < timestamp)
         {
             lastUpdate = timestamp;
@@ -40,54 +34,59 @@ public class SSHConnectService : IDisposable
             return;
         }
 
-        if (!sharedData.UseSSH)
-            return;
-        sshConfigs = sharedData.sshConfigs;
-        foreach (var sshConfig in sshConfigs)
+        foreach ((var key, var server) in sharedData.webUIServers)
         {
-            string connectionName = sshConfig.GetName();
-            if (liveLinks.TryGetValue(connectionName, out var link))
+            if (!server.activate)
+                continue;
+
+            var link = server.sshLink;
+            if (link != null)
             {
                 if (!link.IsConnected)
                 {
                     link.Dispose();
-                    liveLinks.Remove(connectionName);
-                    sharedData.webUIServers.TryRemove(connectionName, out _);
-                    Console.WriteLine("Connection invalid. " + connectionName);
+                    server.sshLink = null;
+                    server.state = WebUIServerState.SSHNotConnected;
+                    Console.WriteLine("Connection invalid. " + link.internalName);
                 }
                 continue;
             }
 
+            var sshConfig = server.sshConfig;
+            if (sshConfig == null)
+                continue;
+
             try
             {
-                SSHRemoteLink remoteLink = new SSHRemoteLink();
-                remoteLink.port = sshConfig.Port;
-                remoteLink.hostname = sshConfig.HostName;
-                remoteLink.username = sshConfig.UserName;
-                remoteLink.remoteForward = (uint)sshConfig.Forwarding;
-                remoteLink.localForward = sshConfig.LocalPort == 0 ? (uint)Random.Shared.Next(20000, 60000) : (uint)sshConfig.LocalPort;
-                remoteLink.internalName = connectionName;
-                remoteLink.privateKeyFile = sharedData.AppConfig.PrivateKeyFile;
+                string connectionName = sshConfig.GetName();
+                SSHRemoteLink remoteLink = new SSHRemoteLink
+                {
+                    port = sshConfig.Port,
+                    hostname = sshConfig.HostName,
+                    username = sshConfig.UserName,
+                    remoteForward = (uint)sshConfig.Forwarding,
+                    localForward = sshConfig.LocalPort == 0 ? (uint)Random.Shared.Next(20000, 60000) : (uint)sshConfig.LocalPort,
+                    privateKeyFile = sshConfig.PrivateKeyFile,
+                    internalName = connectionName,
+                };
+                server.state = WebUIServerState.SSHConnecting;
                 remoteLink.Connect();
 
+                AfterConnect1(remoteLink, server);
                 Console.WriteLine("SSH: {0} port:{1}", connectionName, remoteLink.localForward);
-                liveLinks[connectionName] = remoteLink;
-                AfterConnect(remoteLink);
             }
             catch (Exception ex)
             {
-
+                server.state = WebUIServerState.SSHNotConnected;
             }
         }
     }
 
-    void AfterConnect(SSHRemoteLink remoteLink)
+    void AfterConnect1(SSHRemoteLink remoteLink, WebUIServer server)
     {
-        var serverConfig = sharedData.ssh2Server[remoteLink.internalName];
-        var server = WebUIServer.FromConfig(serverConfig);
         server.URL = new Uri(string.Format("http://127.0.0.1:{0}/", remoteLink.localForward));
-        server.internalName = remoteLink.internalName;
-        sharedData.webUIServers[remoteLink.internalName] = server;
+        server.sshLink = remoteLink;
+        server.state = WebUIServerState.SSHConnected;
     }
 
     public SSHConnectService(ServiceSharedData serviceSharedData)
@@ -100,11 +99,6 @@ public class SSHConnectService : IDisposable
 
     public void Dispose()
     {
-        disposed = true;
-        foreach (var link in liveLinks.Values)
-        {
-            link.Disconnect();
-        }
-        liveLinks.Clear();
+        disposed = true; ;
     }
 }
