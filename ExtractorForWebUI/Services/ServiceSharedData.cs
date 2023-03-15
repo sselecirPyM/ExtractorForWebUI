@@ -21,8 +21,6 @@ public class ServiceSharedData
 
     public AppConfig AppConfig;
 
-    public TaskConfig taskConfig;
-
     public void AddResult(ImageGenerateResult result)
     {
         imageGenerateResults.Enqueue(result);
@@ -49,6 +47,10 @@ public class ServiceSharedData
                 webUIServers[config.Name].state = WebUIServerState.NotConfigured;
             }
         }
+    }
+
+    public void AddTasks(TaskConfig taskConfig)
+    {
         if (taskConfig != null && taskConfig.requests != null && taskConfig.requests.Length > 0)
         {
             foreach (var r in taskConfig.requests)

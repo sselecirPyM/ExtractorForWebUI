@@ -16,7 +16,7 @@ public class MyApp
     {
         var sharedData = new ServiceSharedData();
         sharedData.AppConfig = ReadJson<AppConfig>("appconfig.json");
-        sharedData.taskConfig = ReadJson<TaskConfig>("tasks.json");
+        sharedData.AddTasks(ReadJson<TaskConfig>("tasks.json"));
         sharedData.ServersInit();
 
         var magicObject = new MagicObject();

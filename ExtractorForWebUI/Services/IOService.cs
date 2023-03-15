@@ -32,16 +32,24 @@ public class IOService
             if (!imagesDir.Exists)
                 imagesDir.Create();
 
-            var spanWriter = new SpanWriter<char>(t);
-            spanWriter.Write(DateTime.Now.ToString("MMddHHmmssff"));
-            spanWriter.Write((char)((f) % 10 + '0'));
-            spanWriter.Write((char)((f / 10) % 10 + '0'));
-            spanWriter.Write(result.fileFormat);
-            f = (f + 1) % 100;
-            if (result.imageData.Length > result.width * result.height / 51.2)
-                _ = File.WriteAllBytesAsync(Path.Combine(path1, t[..spanWriter.Count].ToString()), result.imageData);
+            if (result.fileName != null)
+            {
+                _ = File.WriteAllBytesAsync(Path.Combine(path1, result.fileName + result.fileFormat), result.imageData);
+            }
             else
-                Console.WriteLine("Ignore 1 black image.");
+            {
+                var spanWriter = new SpanWriter<char>(t);
+                spanWriter.Write(DateTime.Now.ToString("MMddHHmmssff"));
+                spanWriter.Write((char)((f) % 10 + '0'));
+                spanWriter.Write((char)((f / 10) % 10 + '0'));
+                spanWriter.Write(result.fileFormat);
+                f = (f + 1) % 100;
+
+                if (result.imageData.Length > result.width * result.height / 51.2)
+                    _ = File.WriteAllBytesAsync(Path.Combine(path1, t[..spanWriter.Count].ToString()), result.imageData);
+                else
+                    Console.WriteLine("Ignore 1 black image.");
+            }
         }
     }
 

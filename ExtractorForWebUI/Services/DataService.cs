@@ -26,7 +26,7 @@ public class DataService
         if (!noTask && sharedData.imageGenerateRequests.Count == 0)
         {
             noTask = true;
-            Console.WriteLine("No tasks remain.");
+            Console.WriteLine("No legacy tasks.");
         }
 
         servers.Clear();
@@ -42,9 +42,9 @@ public class DataService
                 servers.Add(d);
             }
         }
-        foreach(var s in servers)
+        foreach (var s in servers)
         {
-            if(sharedData.imageGenerateRequests.TryDequeue(out var r))
+            if (sharedData.imageGenerateRequests.TryDequeue(out var r))
             {
                 SendPost(r, s);
                 if (s.imageBatchSize < r.imageCount)
@@ -119,7 +119,8 @@ public class DataService
                 prompt = request.prompt,
                 width = request.width,
                 height = request.height,
-                fileFormat = Path.GetExtension(result.RequestMessage.RequestUri.LocalPath)
+                fileFormat = Path.GetExtension(result.RequestMessage.RequestUri.LocalPath),
+                fileName = request.saveFileName,
             });
         }
         catch (Exception ex)
@@ -148,11 +149,14 @@ public class DataService
         var e0 = element[0];
         if (e0.ValueKind == JsonValueKind.Object)
         {
+            int imgCount = taskPack.request.imageCount;
+            int start = imgCount > 1 ? 1 : 0;
+
             int length = element.GetArrayLength();
-            for (int i = 0; i < length; i++)
+            length = imgCount > 1 ? imgCount + 1 : imgCount;
+
+            for (int i = start; i < length; i++)
             {
-                if (length > 2 && i == 0)
-                    continue;
                 if (!element[i].TryGetProperty("name", out var o))
                     continue;
 
@@ -214,29 +218,73 @@ public class DataService
         request = request.Clone();
         request.imageCount = batchSize;
 
+        Dictionary<string, object> data1;
         WebUITxt2ImgFrame frame;
         Uri uri;
         JsonContent content;
-        Dictionary<string, object> data1 = new Dictionary<string, object>()
+        GradioFillData taskType;
+        object[] data;
+        if (!string.IsNullOrEmpty(request.img2imgFile))
         {
-            ["txt2img_prompt"] = request.prompt,
-            ["txt2img_neg_prompt"] = request.negativePrompt,
-            ["txt2img_steps"] = request.step,
-            ["txt2img_sampling"] = request.sampleMethod,
-            ["txt2img_restore_faces"] = request.restore_faces,
-            ["txt2img_batch_count"] = batchCount,
-            ["txt2img_batch_size"] = batchSize,
-            ["txt2img_seed"] = request.seed,
-            ["txt2img_subseed"] = request.subSeed,
-            ["txt2img_subseed_strength"] = request.subSeedStrength,
-            ["txt2img_height"] = request.height,
-            ["txt2img_width"] = request.width,
-        };
-        object[] data = server.SDWebUIConfig.FillDatasTxt2Img(data1);
+            taskType = server.SDWebUIConfig.img2img;
+            string imageType = Path.GetExtension(request.img2imgFile).ToLower() switch
+            {
+                ".png" => "png",
+                ".jpg" => "jpeg",
+                ".jpeg" => "jpeg",
+                ".webp" => "webp",
+                _ => ""
+            };
+            if (imageType == "")
+                return;
+            if (request.img2imgFileData == null)
+                request.img2imgFileData = string.Format("\"data:image/{1};base64,{0}\"", Convert.ToBase64String(File.ReadAllBytes(request.img2imgFile)), imageType);
+
+            data1 = new Dictionary<string, object>()
+            {
+                ["img2img_prompt"] = request.prompt,
+                ["img2img_neg_prompt"] = request.negativePrompt,
+                ["img2img_steps"] = request.step,
+                ["img2img_sampling"] = request.sampleMethod,
+                ["img2img_restore_faces"] = request.restoreFaces,
+                ["img2img_batch_count"] = batchCount,
+                ["img2img_batch_size"] = batchSize,
+                ["img2img_seed"] = request.seed,
+                ["img2img_subseed"] = request.subSeed,
+                ["img2img_subseed_strength"] = request.subSeedStrength,
+                ["img2img_height"] = request.height,
+                ["img2img_width"] = request.width,
+                ["img2img_image"] = request.img2imgFileData
+            };
+            AddControlNetParameter(data1, request.controlNet);
+
+            data = taskType.FillDatas(data1);
+            data[1] = 0;
+        }
+        else
+        {
+            taskType = server.SDWebUIConfig.txt2img;
+            data1 = new Dictionary<string, object>()
+            {
+                ["txt2img_prompt"] = request.prompt,
+                ["txt2img_neg_prompt"] = request.negativePrompt,
+                ["txt2img_steps"] = request.step,
+                ["txt2img_sampling"] = request.sampleMethod,
+                ["txt2img_restore_faces"] = request.restoreFaces,
+                ["txt2img_batch_count"] = batchCount,
+                ["txt2img_batch_size"] = batchSize,
+                ["txt2img_seed"] = request.seed,
+                ["txt2img_subseed"] = request.subSeed,
+                ["txt2img_subseed_strength"] = request.subSeedStrength,
+                ["txt2img_height"] = request.height,
+                ["txt2img_width"] = request.width,
+            };
+            data = taskType.FillDatas(data1);
+        }
 
         frame = new WebUITxt2ImgFrame()
         {
-            fn_index = server.txt2img_fn_index,
+            fn_index = taskType.fn_index,
             session_hash = "spider",
             data = data
         };
@@ -245,6 +293,24 @@ public class DataService
         var task = HttpClient.PostAsync(uri, content);
         generateTasks.Add(new GenerateTaskPack(task, server, request));
         server.state = WebUIServerState.Running;
+    }
+
+    void AddControlNetParameter(Dictionary<string, object> parameters, ControlNetParameters controlNetParameters)
+    {
+        if (controlNetParameters == null)
+            return;
+        parameters["ControlNet_Enable"] = true;
+        parameters["ControlNet_Preprocessor"] = controlNetParameters.preprocessor;
+        parameters["ControlNet_Model"] = controlNetParameters.model;
+        parameters["ControlNet_Weight"] = controlNetParameters.weight;
+        parameters["ControlNet_Invert Input Color"] = controlNetParameters.invertColor;
+        parameters["ControlNet_Resize Mode"] = controlNetParameters.resizeMode;
+        parameters["ControlNet_Low VRAM"] = controlNetParameters.lowVram;
+        parameters["ControlNet_Threshold A"] = controlNetParameters.thresholdA;
+        parameters["ControlNet_Threshold B"] = controlNetParameters.thresholdB;
+        parameters["ControlNet_Guidance Start (T)"] = controlNetParameters.guidanceStart;
+        parameters["ControlNet_Guidance End (T)"] = controlNetParameters.guidanceStart;
+        parameters["ControlNet_Guess Mode"] = controlNetParameters.guessMode;
     }
 
     public DataService(ServiceSharedData serviceSharedData)

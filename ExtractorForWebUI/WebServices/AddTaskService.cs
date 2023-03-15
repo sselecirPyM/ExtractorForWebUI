@@ -1,5 +1,4 @@
-﻿using ExtractorForWebUI.Services;
-using System;
+﻿using System;
 using System.Text.Json;
 
 namespace ExtractorForWebUI.WebServices;
@@ -15,12 +14,7 @@ public class AddTaskService : BaseWebService
             try
             {
                 var taskConfig = JsonSerializer.Deserialize<TaskConfig>(Request.InputStream);
-                var generateRequests = context.SharedData.imageGenerateRequests;
-                foreach (var request in taskConfig.requests)
-                {
-                    generateRequests.Enqueue(request);
-                }
-                Console.WriteLine("Add {0} tasks to the list.", taskConfig.requests.Length);
+                context.SharedData.AddTasks(taskConfig);
                 Response.StatusCode = 201;
             }
             catch (Exception ex)

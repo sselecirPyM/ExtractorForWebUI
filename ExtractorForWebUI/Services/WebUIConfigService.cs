@@ -70,7 +70,7 @@ public class WebUIConfigService
             {
                 var response = content.ReadFromJsonAsync<ConfigData>().Result;
                 server.SDWebUIConfig.Config(response);
-                if (server.txt2img_fn_index != -1)
+                if (server.SDWebUIConfig.txt2img != null)
                 {
                     server.state = WebUIServerState.Configured;
                     Console.WriteLine("Server {0} Configured.", server.viewName);

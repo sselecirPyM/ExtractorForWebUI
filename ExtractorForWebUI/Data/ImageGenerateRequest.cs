@@ -1,6 +1,6 @@
 ﻿namespace ExtractorForWebUI.Data;
 
-public sealed class ImageGenerateRequest 
+public sealed class ImageGenerateRequest
 {
     public string prompt { get; set; }
     public string negativePrompt { get; set; }
@@ -16,10 +16,18 @@ public sealed class ImageGenerateRequest
     public int height { get; set; } = 512;
     public float denoiseStrenth { get; set; } = 0.7f;
 
-    public bool restore_faces { get; set; } = false;
+    public bool restoreFaces { get; set; } = false;
     public bool tiling { get; set; } = false;
+    public bool highresFix { get; set; } = false;
 
     public string saveDirectory { get; set; }
+    public string saveFileName { get; set; }
+
+    public string img2imgFile { get; set; }
+
+    public string img2imgFileData;
+
+    public ControlNetParameters controlNet { get; set; }
 
     public ImageGenerateRequest Clone()
     {
@@ -29,7 +37,7 @@ public sealed class ImageGenerateRequest
     public bool IsSameRequest(ImageGenerateRequest anotherRequest)
     {
         var request = anotherRequest;
-        return 
+        return
                prompt == request.prompt &&
                negativePrompt == request.negativePrompt &&
                sampleMethod == request.sampleMethod &&
@@ -42,8 +50,30 @@ public sealed class ImageGenerateRequest
                width == request.width &&
                height == request.height &&
                denoiseStrenth == request.denoiseStrenth &&
-               restore_faces == request.restore_faces &&
+               restoreFaces == request.restoreFaces &&
                tiling == request.tiling &&
+               highresFix == request.highresFix &&
+               controlNet == request.controlNet &&
                saveDirectory == request.saveDirectory;
     }
+}
+
+public sealed class ControlNetParameters
+{
+    //public bool enable { get; set; }
+    public string preprocessor { get; set; } = "canny";
+    public string model { get; set; }
+
+    public string resizeMode { get; set; } = "Scale to Fit (Inner Fit)";
+    public float weight { get; set; } = 1;
+    public bool invertColor { get; set; } = false;
+    public bool lowVram { get; set; } = true;
+    public bool guessMode { get; set; } = false;
+
+    public float guidanceStart { get; set; } = 0;
+    public float guidanceEnd { get; set; } = 1;
+
+
+    public int thresholdA { get; set; } = 100;
+    public int thresholdB { get; set; } = 200;
 }
