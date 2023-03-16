@@ -1,12 +1,15 @@
 ﻿using ExtractorForWebUI.Data;
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
 
-public class IOService
+public class IOService : IGetImageResult
 {
+    ConcurrentQueue<ImageGenerateResult> imageGenerateResults = new();
+
     public async Task Run()
     {
         while (true)
@@ -18,12 +21,12 @@ public class IOService
 
     public void Tick()
     {
-        int count = sharedData.imageGenerateResults.Count;
+        int count = imageGenerateResults.Count;
 
         Span<char> t = stackalloc char[1024];
         for (int i = 0; i < count; i++)
         {
-            sharedData.imageGenerateResults.TryDequeue(out var result);
+            imageGenerateResults.TryDequeue(out var result);
             string path1 = path;
             if (result.saveDirectory != null)
                 path1 = Environment.ExpandEnvironmentVariables(result.saveDirectory);
@@ -51,6 +54,11 @@ public class IOService
                     Console.WriteLine("Ignore 1 black image.");
             }
         }
+    }
+
+    public void OnGetImageResult(ImageGenerateResult result)
+    {
+        imageGenerateResults.Enqueue(result);
     }
 
     int f = 0;

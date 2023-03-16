@@ -13,3 +13,8 @@ public sealed class ImageGenerateResult
     public int width;
     public int height;
 }
+
+public interface IGetImageResult
+{
+    public void OnGetImageResult(ImageGenerateResult result);
+}

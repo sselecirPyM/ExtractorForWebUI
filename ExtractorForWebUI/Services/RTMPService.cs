@@ -1,6 +1,7 @@
 ﻿using ExtractorForWebUI.Data;
 using ExtractorForWebUI.RTMP;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace ExtractorForWebUI.Services;
 
-public class RTMPService
+public class RTMPService : IGetImageResult
 {
     public RTMPService(ServiceSharedData sharedData)
     {
@@ -86,7 +87,7 @@ public class RTMPService
                 session.Dispose();
             }
         }
-        while (sharedData.rtmpQueue.TryDequeue(out var result))
+        while (rtmpQueue.TryDequeue(out var result))
         {
             if (result.imageData.Length > 1024 * 10)
                 results.Add(result);
@@ -121,6 +122,14 @@ public class RTMPService
         sharedData.rtmpLive = sessions.Count;
         results.Clear();
     }
+
+    public void OnGetImageResult(ImageGenerateResult result)
+    {
+        if (sharedData.rtmpLive > 0)
+            rtmpQueue.Enqueue(result);
+    }
+
+    ConcurrentQueue<ImageGenerateResult> rtmpQueue = new();
 
     List<ImageGenerateResult> results = new();
 

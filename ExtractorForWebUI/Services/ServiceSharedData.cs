@@ -2,20 +2,19 @@
 using ExtractorForWebUI.SDConnection;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace ExtractorForWebUI.Services;
 
 public class ServiceSharedData
 {
-    public ConcurrentQueue<ImageGenerateResult> imageGenerateResults = new();
-
     public ConcurrentQueue<ImageGenerateRequest> imageGenerateRequests = new();
 
     public ConcurrentDictionary<string, WebUIServer> webUIServers = new();
 
     public ConcurrentQueue<RTMPRequest> RTMPRequests = new();
 
-    public ConcurrentQueue<ImageGenerateResult> rtmpQueue = new();
+    public List<IGetImageResult> getImageResults = new();
 
     public int rtmpLive = 0;
 
@@ -23,10 +22,11 @@ public class ServiceSharedData
 
     public void AddResult(ImageGenerateResult result)
     {
-        imageGenerateResults.Enqueue(result);
-        if (rtmpLive > 0)
-            rtmpQueue.Enqueue(result);
-    }
+        foreach (var item in getImageResults)
+        {
+            item.OnGetImageResult(result);
+        }
+     }
 
     public void ServersInit()
     {

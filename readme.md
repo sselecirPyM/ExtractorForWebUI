@@ -38,6 +38,7 @@ appconfig.json
         },
         {
             "Name": "RemoteGPU2",
+            "Activate": false,
             "BatchSize": 4,
             "SSHConfig": {
                 "Port": 1234,
@@ -78,4 +79,27 @@ tasks.json
     ]
 }
 ```
+## 命令行选项
+--img2imgrequest file
 
+```json
+{
+    "saveDirectory": "img2imgData/",
+    "prompt": "brown hair, kizuna ai",
+    "negativePrompt": "nsfw, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, ugly, 3D game, child, children, sketches, big chest, paintings, sketches, grayscale, glans, acnes, age spot, naked",
+    "step": 30,
+    "sampleMethod": "DDIM",
+    "cfgScale": 12,
+    "height": 1024,
+    "width": 512,
+    "seed": -1,
+    "subSeed": -1,
+    "imageCount": 1,
+    "denoiseStrenth": 0.7,
+    "img2imgFile": "foldertoimages/",
+    "controlNet":{
+        "preprocessor":"canny",
+        "model":"control_canny [fabdf64a]"
+    }
+}
+```
